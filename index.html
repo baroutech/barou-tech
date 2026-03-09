@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Barou Tech Social</title>
+<meta charset="UTF-8">
+<style>
+body{
+  font-family: Arial, sans-serif;
+  background:#f0f2f5;
+  margin:0;
+  padding:0;
+}
+header{
+  background:#1877f2;
+  color:white;
+  padding:20px;
+  text-align:center;
+  font-size:28px;
+  font-weight:bold;
+}
+.description{
+  background:white;
+  width:80%;
+  max-width:600px;
+  margin:20px auto;
+  padding:15px;
+  border-radius:10px;
+  box-shadow:0 0 10px rgba(0,0,0,0.1);
+  font-size:16px;
+  color:#333;
+  text-align:center;
+}
+#box{
+  background:white;
+  width:80%;
+  max-width:600px;
+  margin:20px auto;
+  padding:20px;
+  border-radius:10px;
+  box-shadow:0 0 10px rgba(0,0,0,0.2);
+}
+input, textarea{
+  width:95%;
+  padding:10px;
+  margin:5px 0;
+  border-radius:5px;
+  border:1px solid #ccc;
+}
+button{
+  padding:10px 20px;
+  background:#1877f2;
+  color:white;
+  border:none;
+  border-radius:5px;
+  cursor:pointer;
+  margin-top:10px;
+}
+button:hover{background:#145dbf;}
+#posts{
+  width:80%;
+  max-width:600px;
+  margin:20px auto;
+}
+.post{
+  background:#fff;
+  margin:10px 0;
+  padding:15px;
+  border-radius:10px;
+  box-shadow:0 0 5px rgba(0,0,0,0.1);
+  text-align:left;
+}
+.post img{
+  max-width:100%;
+  border-radius:5px;
+  margin-top:10px;
+}
+#search{
+  width:95%;
+  padding:10px;
+  margin-top:10px;
+  border-radius:5px;
+  border:1px solid #ccc;
+}
+</style>
+</head>
+<body>
+
+<header>Barou Tech</header>
+
+<div class="description">
+Bienvenue sur Barou Tech ! Partage des messages et des images, découvre ce que les autres publient et amuse-toi avec notre communauté.
+</div>
+
+<div id="box">
+<h3>Publier un message</h3>
+<input id="username" placeholder="Ton nom">
+<textarea id="message" placeholder="Écris quelque chose"></textarea>
+<input type="file" id="imageFile">
+<br>
+<button onclick="sendMessage()">Publier</button>
+<br>
+<input type="text" id="search" placeholder="Rechercher..." onkeyup="searchPosts()">
+</div>
+
+<h2 style="text-align:center;">Publications</h2>
+<div id="posts"></div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+
+<script>
+// 🔥 FirebaseConfig
+var firebaseConfig = {
+apiKey: "AIzaSyBoy6oozV6d8XG1IIEmqkV1L7cDEz1TnGc",
+authDomain: "oumar-tech.firebaseapp.com",
+databaseURL: "https://oumar-tech-default-rtdb.firebaseio.com",
+projectId: "oumar-tech",
+storageBucket: "oumar-tech.appspot.com",
+messagingSenderId: "1005174081233",
+appId: "1:1005174081233:web:80aca015cb9ac1ac2227f0",
+measurementId: "G-W91QEZLT24"
+};
+firebase.initializeApp(firebaseConfig);
+
+var db = firebase.database();
+var storage = firebase.storage();
+
+// Envoyer un message avec image
+function sendMessage(){
+  var name = document.getElementById("username").value.trim();
+  var text = document.getElementById("message").value.trim();
+  var fileInput = document.getElementById("imageFile");
+  if(name=="" || text==""){ alert("Remplis les champs !"); return; }
+
+  if(fileInput.files.length > 0){
+    var file = fileInput.files[0];
+    var storageRef = storage.ref('images/' + Date.now() + '-' + file.name);
+    storageRef.put(file).then(function(snapshot){
+      snapshot.ref.getDownloadURL().then(function(url){
+        savePost(name, text, url);
+      });
+    });
+  } else {
+    savePost(name, text, null);
+  }
+
+  document.getElementById("message").value="";
+  fileInput.value="";
+}
+
+// Sauvegarder post dans Firebase Database
+function savePost(name, text, imageURL){
+  db.ref("posts").push({
+    user: name,
+    message: text,
+    image: imageURL || null
+  });
+}
+
+// Affichage des posts en direct
+db.ref("posts").on("child_added", function(snapshot){
+  var data = snapshot.val();
+  displayPost(data);
+});
+
+function displayPost(data){
+  var post = document.createElement("div");
+  post.className = "post";
+  var content = "<b>"+escapeHtml(data.user)+"</b><br>"+escapeHtml(data.message);
+  if(data.image) content += "<br><img src='"+data.image+"'>";
+  post.innerHTML = content;
+  document.getElementById("posts").prepend(post);
+}
+
+// Recherche
+function searchPosts(){
+  var filter = document.getElementById("search").value.toLowerCase();
+  var posts = document.getElementsByClassName("post");
+  for(var i=0;i<posts.length;i++){
+    var text = posts[i].innerText.toLowerCase();
+    posts[i].style.display = text.includes(filter) ? "" : "none";
+  }
+}
+
+// Sécuriser le texte
+function escapeHtml(text){
+  var div=document.createElement("div");
+  div.appendChild(document.createTextNode(text));
+  return div.innerHTML;
+}
+</script>
+
+</body>
+</html>
